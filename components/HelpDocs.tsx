@@ -13,7 +13,7 @@ export const HelpDocs = () => {
 // 1. CORS & Headers
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS"); // Removed DELETE to avoid hosting blocks
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
@@ -81,7 +81,8 @@ if ($method === 'GET') {
     }
 }
 
-// --- POST REQUESTS (Create & Update) ---
+// --- POST REQUESTS (Create, Update, AND Delete) ---
+// Note: We use POST for Delete actions too, because free hosting often blocks DELETE method.
 if ($method === 'POST') {
     $data = getJsonInput();
 
@@ -157,20 +158,26 @@ if ($method === 'POST') {
             sendResponse(false, null, $conn->error);
         }
     }
-}
 
-// --- DELETE REQUESTS ---
-if ($method === 'DELETE') {
-    $id = intval($_GET['id']);
-
+    // DELETE ACTIONS (Moved to POST for compatibility)
     if ($action === 'delete_user') {
-        $conn->query("DELETE FROM users WHERE id=$id");
-        sendResponse(true, null, "User deleted");
+        $id = intval($_GET['id']);
+        if ($id > 0) {
+            $conn->query("DELETE FROM users WHERE id=$id");
+            sendResponse(true, null, "User deleted");
+        } else {
+            sendResponse(false, null, "Invalid ID");
+        }
     }
 
     if ($action === 'delete_subject') {
-        $conn->query("DELETE FROM subjects WHERE id=$id");
-        sendResponse(true, null, "Subject deleted");
+        $id = intval($_GET['id']);
+        if ($id > 0) {
+            $conn->query("DELETE FROM subjects WHERE id=$id");
+            sendResponse(true, null, "Subject deleted");
+        } else {
+             sendResponse(false, null, "Invalid ID");
+        }
     }
 }
 

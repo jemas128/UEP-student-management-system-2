@@ -1,6 +1,6 @@
 # UEP Student Management System (SMS) - Deployment Guide
 
-**Version:** 1.1.0  
+**Version:** 1.2.0 (Hosting Compatibility Mode)  
 **Theme:** Maroon & White (UEP Branding)  
 **Stack:** React (Frontend) + PHP (Backend) + MySQL (Database)
 
@@ -86,10 +86,10 @@ VALUES ('admin', 'admin', 'System Administrator', 'ADMIN', 'APPROVED', 'admin@ue
 <?php
 // FILE: api.php
 
-// CORS Headers (Allows your React app to talk to this PHP script)
+// CORS Headers
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS"); // Use POST for deletes
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
@@ -137,7 +137,6 @@ if ($method === 'GET') {
         sendResponse(true, $data);
     }
     if ($action === 'get_grades') {
-        // We map the columns to match the React frontend camelCase
         $result = $conn->query("SELECT id, student_id as studentId, subject_id as subjectId, score, semester FROM grades");
         $data = [];
         while ($row = $result->fetch_assoc()) $data[] = $row;
@@ -145,10 +144,32 @@ if ($method === 'GET') {
     }
 }
 
-// POST (Create/Update)
+// POST (Create/Update AND Delete)
 if ($method === 'POST') {
     $data = getJsonInput();
 
+    // -- DELETE ACTIONS (Using POST for compatibility) --
+    if ($action === 'delete_user') {
+        $id = intval($_GET['id']);
+        if($id > 0) {
+            $conn->query("DELETE FROM users WHERE id=$id");
+            sendResponse(true, null, "Deleted");
+        } else {
+            sendResponse(false, null, "Invalid ID");
+        }
+    }
+
+    if ($action === 'delete_subject') {
+        $id = intval($_GET['id']);
+        if($id > 0) {
+            $conn->query("DELETE FROM subjects WHERE id=$id");
+            sendResponse(true, null, "Deleted");
+        } else {
+            sendResponse(false, null, "Invalid ID");
+        }
+    }
+
+    // -- SAVE ACTIONS --
     if ($action === 'save_user') {
         $user = $conn->real_escape_string($data['username']);
         $pass = $conn->real_escape_string($data['password']);
@@ -157,7 +178,6 @@ if ($method === 'POST') {
         $role = $conn->real_escape_string($data['role']);
         $status = $conn->real_escape_string($data['status']);
         
-        // If ID exists and is a number, UPDATE. Else INSERT.
         if (isset($data['id']) && is_numeric($data['id'])) {
             $id = $data['id'];
             $sql = "UPDATE users SET username='$user', password='$pass', full_name='$name', email='$email', role='$role', status='$status' WHERE id=$id";
@@ -198,7 +218,6 @@ if ($method === 'POST') {
         $sub = intval($data['subjectId']);
         $scr = intval($data['score']);
         
-        // Check for existing grade to Update
         $check = $conn->query("SELECT id FROM grades WHERE student_id=$stu AND subject_id=$sub");
         if ($check->num_rows > 0) {
             $row = $check->fetch_assoc();
@@ -207,7 +226,6 @@ if ($method === 'POST') {
             $savedId = $gid;
         } else {
             $sql = "INSERT INTO grades (student_id, subject_id, score, semester) VALUES ($stu, $sub, $scr, 'Fall 2024')";
-            // We'll get insert_id after execution
         }
         
         if ($conn->query($sql)) {
@@ -219,19 +237,6 @@ if ($method === 'POST') {
     }
 }
 
-// DELETE
-if ($method === 'DELETE') {
-    $id = intval($_GET['id']);
-    if ($action === 'delete_user') {
-        $conn->query("DELETE FROM users WHERE id=$id");
-        sendResponse(true, null, "Deleted");
-    }
-    if ($action === 'delete_subject') {
-        $conn->query("DELETE FROM subjects WHERE id=$id");
-        sendResponse(true, null, "Deleted");
-    }
-}
-
 $conn->close();
 ?>
 ```
@@ -240,7 +245,7 @@ $conn->close();
 
 ## 🔌 Phase 4: Connecting React to PHP
 
-When you are ready to make the app work with your real server, replace the code in `services/storage.ts` with the code below.
+**Update:** We now use `POST` for deletions to ensure compatibility with all hosting providers.
 
 1.  Open `services/storage.ts`.
 2.  Delete everything.
@@ -254,7 +259,7 @@ import { User, Subject, Grade, AnalysisResult } from '../types';
 // REPLACE THIS WITH YOUR ACTUAL BYET.HOST URL
 const API_URL = 'http://your-website-name.byethostXX.com/api.php';
 
-// Helper to ensure IDs are strings (React expects strings, Database gives numbers)
+// Helper to ensure IDs are strings
 const normalizeId = (item: any) => ({ ...item, id: String(item.id) });
 
 export const storage = {
@@ -263,7 +268,6 @@ export const storage = {
     try {
       const res = await fetch(`${API_URL}?action=get_users`);
       const json = await res.json();
-      // Map IDs to strings to prevent type errors in frontend
       return json.success ? json.data.map(normalizeId) : [];
     } catch (e) {
       console.error("API Error:", e);
@@ -280,7 +284,8 @@ export const storage = {
   },
 
   async deleteUser(userId: string): Promise<void> {
-    await fetch(`${API_URL}?action=delete_user&id=${userId}`, { method: 'DELETE' });
+    // UPDATED: Using POST for delete to avoid hosting restrictions
+    await fetch(`${API_URL}?action=delete_user&id=${userId}`, { method: 'POST' });
   },
 
   // Subjects
@@ -301,7 +306,8 @@ export const storage = {
   },
 
   async deleteSubject(subjectId: string): Promise<void> {
-    await fetch(`${API_URL}?action=delete_subject&id=${subjectId}`, { method: 'DELETE' });
+    // UPDATED: Using POST for delete
+    await fetch(`${API_URL}?action=delete_subject&id=${subjectId}`, { method: 'POST' });
   },
 
   // Grades
@@ -326,7 +332,7 @@ export const storage = {
     });
   },
 
-  // AI Analysis (Keep LocalStorage for simplicity as it's temporary data)
+  // AI Analysis (Local Storage is fine for this feature)
   async saveAnalysis(result: AnalysisResult): Promise<void> {
     const data = JSON.parse(localStorage.getItem('sms_analysis') || '[]');
     data.push(result);

@@ -24,7 +24,8 @@ const App: React.FC = () => {
   }, []);
 
   const refreshData = async () => {
-    setIsLoading(true);
+    // Only show full loading spinner on initial load, not background refreshes
+    if (!allUsers.length) setIsLoading(true);
     try {
       const [u, s, g] = await Promise.all([
         storage.getUsers(),
@@ -53,40 +54,86 @@ const App: React.FC = () => {
   };
 
   const handleUpdateStatus = async (id: string, status: AccountStatus) => {
+    // Optimistic Update
+    setAllUsers(prev => prev.map(u => u.id === id ? { ...u, status } : u));
+    
     const targetUser = allUsers.find(u => u.id === id);
     if (targetUser) {
       const updated = { ...targetUser, status };
       await storage.saveUser(updated);
-      await refreshData();
+      await refreshData(); // Sync with backend
     }
   };
 
   const handleEditUser = async (updatedUser: User) => {
+    // Optimistic Update
+    setAllUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    
     await storage.saveUser(updatedUser);
     await refreshData();
   };
 
   const handleDeleteUser = async (id: string) => {
-    if (confirm('Are you sure you want to delete this user? This will also remove their grades.')) {
-      await storage.deleteUser(id);
-      await refreshData();
+    if (window.confirm('Are you sure you want to delete this user? This will also remove their grades.')) {
+      // 1. Optimistic Update (Instant Removal from UI)
+      setAllUsers(prev => prev.filter(u => u.id !== id));
+      
+      try {
+        // 2. Perform actual delete
+        await storage.deleteUser(id);
+        // 3. Sync to ensure data integrity
+        await refreshData();
+      } catch (error) {
+        console.error("Delete failed", error);
+        alert("Failed to delete user. Please try again.");
+        refreshData(); // Revert state if failed
+      }
     }
   };
 
   const handleGradeChange = async (grade: Grade) => {
+    // Optimistic Update for grades is tricky because of the structure, 
+    // but we can update the list directly
+    setGrades(prev => {
+      const exists = prev.find(g => g.id === grade.id);
+      if (exists) return prev.map(g => g.id === grade.id ? grade : g);
+      return [...prev, grade];
+    });
+
     await storage.saveGrade(grade);
-    await refreshData();
+    // Background refresh
+    storage.getGrades().then(setGrades);
   };
 
   const handleSubjectSave = async (subject: Subject) => {
+    setSubjects(prev => {
+      const idx = prev.findIndex(s => s.id === subject.id);
+      if (idx >= 0) {
+        const newSubs = [...prev];
+        newSubs[idx] = subject;
+        return newSubs;
+      }
+      return [...prev, subject];
+    });
+
     await storage.saveSubject(subject);
     await refreshData();
   };
 
   const handleSubjectDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this subject? All associated student grades will be lost.')) {
-      await storage.deleteSubject(id);
-      await refreshData();
+    if (window.confirm('Are you sure you want to delete this subject? All associated student grades will be lost.')) {
+      // 1. Optimistic Update (Instant Removal)
+      setSubjects(prev => prev.filter(s => s.id !== id));
+      
+      try {
+        // 2. Actual Delete
+        await storage.deleteSubject(id);
+        // 3. Sync
+        await refreshData();
+      } catch (error) {
+        console.error("Subject delete failed", error);
+        refreshData();
+      }
     }
   };
 

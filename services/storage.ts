@@ -106,7 +106,7 @@ class StorageService {
   async deleteSubject(subjectId: string): Promise<void> {
     await this.delay();
     const subjects = JSON.parse(localStorage.getItem(STORAGE_KEYS.SUBJECTS) || '[]');
-    // Fix: Ensure we compare strings
+    // Fix: Ensure we compare strings to avoid string vs number issues
     const filteredSubjects = subjects.filter((s: Subject) => String(s.id) !== String(subjectId));
     localStorage.setItem(STORAGE_KEYS.SUBJECTS, JSON.stringify(filteredSubjects));
 
@@ -140,14 +140,12 @@ class StorageService {
 
   // AI Analysis storage
   async saveAnalysis(result: AnalysisResult): Promise<void> {
-    // No delay needed here usually, but good for consistency
     const data = JSON.parse(localStorage.getItem(STORAGE_KEYS.ANALYSIS) || '[]');
     data.push(result);
     localStorage.setItem(STORAGE_KEYS.ANALYSIS, JSON.stringify(data));
   }
 
   getAnalysis(studentId: string): AnalysisResult | undefined {
-    // Keep this sync for simple UI reads
     const data = JSON.parse(localStorage.getItem(STORAGE_KEYS.ANALYSIS) || '[]');
     return data.filter((a: AnalysisResult) => String(a.studentId) === String(studentId)).pop();
   }
