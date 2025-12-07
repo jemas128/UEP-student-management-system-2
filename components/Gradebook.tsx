@@ -220,11 +220,11 @@ export const Gradebook: React.FC<GradebookProps> = ({
                        <span className="font-bold text-gray-800">{sub.code}</span>
                        <span className="text-gray-500 text-xs ml-2">{sub.name}</span>
                      </div>
-                     <div className="flex space-x-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                       <button onClick={() => startEditSubject(sub)} className="p-1 hover:bg-blue-100 text-blue-600 rounded">
+                     <div className="flex space-x-1">
+                       <button type="button" onClick={() => startEditSubject(sub)} className="p-1 hover:bg-blue-100 text-blue-600 rounded">
                          <Edit className="h-3 w-3" />
                        </button>
-                       <button onClick={() => onSubjectDelete(sub.id)} className="p-1 hover:bg-red-100 text-red-600 rounded">
+                       <button type="button" onClick={() => onSubjectDelete(sub.id)} className="p-1 hover:bg-red-100 text-red-600 rounded">
                          <Trash2 className="h-3 w-3" />
                        </button>
                      </div>

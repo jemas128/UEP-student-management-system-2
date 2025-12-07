@@ -240,13 +240,12 @@ $conn->close();
 
 ## 🔌 Phase 4: Connecting React to PHP
 
-When you are ready to make the app work with your real server, you must **replace the code** in `services/storage.ts` with the code below.
+When you are ready to make the app work with your real server, replace the code in `services/storage.ts` with the code below.
 
-1.  Open your project code.
-2.  Open `services/storage.ts`.
-3.  Delete everything in it.
-4.  Paste the code below.
-5.  **Important:** Change the `API_URL` variable to your actual website address (e.g., `http://myschool.byethost12.com/api.php`).
+1.  Open `services/storage.ts`.
+2.  Delete everything.
+3.  Paste the code below.
+4.  **Important:** Change `API_URL` to your website address.
 
 ```typescript
 // FILE: services/storage.ts (Production Version)
@@ -255,17 +254,27 @@ import { User, Subject, Grade, AnalysisResult } from '../types';
 // REPLACE THIS WITH YOUR ACTUAL BYET.HOST URL
 const API_URL = 'http://your-website-name.byethostXX.com/api.php';
 
+// Helper to ensure IDs are strings (React expects strings, Database gives numbers)
+const normalizeId = (item: any) => ({ ...item, id: String(item.id) });
+
 export const storage = {
   // Users
   async getUsers(): Promise<User[]> {
-    const res = await fetch(`${API_URL}?action=get_users`);
-    const json = await res.json();
-    return json.success ? json.data : [];
+    try {
+      const res = await fetch(`${API_URL}?action=get_users`);
+      const json = await res.json();
+      // Map IDs to strings to prevent type errors in frontend
+      return json.success ? json.data.map(normalizeId) : [];
+    } catch (e) {
+      console.error("API Error:", e);
+      return [];
+    }
   },
 
   async saveUser(user: User): Promise<void> {
     await fetch(`${API_URL}?action=save_user`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(user)
     });
   },
@@ -276,14 +285,17 @@ export const storage = {
 
   // Subjects
   async getSubjects(): Promise<Subject[]> {
-    const res = await fetch(`${API_URL}?action=get_subjects`);
-    const json = await res.json();
-    return json.success ? json.data : [];
+    try {
+      const res = await fetch(`${API_URL}?action=get_subjects`);
+      const json = await res.json();
+      return json.success ? json.data.map(normalizeId) : [];
+    } catch (e) { return []; }
   },
 
   async saveSubject(subject: Subject): Promise<void> {
     await fetch(`${API_URL}?action=save_subject`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(subject)
     });
   },
@@ -294,19 +306,27 @@ export const storage = {
 
   // Grades
   async getGrades(): Promise<Grade[]> {
-    const res = await fetch(`${API_URL}?action=get_grades`);
-    const json = await res.json();
-    return json.success ? json.data : [];
+    try {
+      const res = await fetch(`${API_URL}?action=get_grades`);
+      const json = await res.json();
+      return json.success ? json.data.map((g: any) => ({
+        ...g,
+        id: String(g.id),
+        studentId: String(g.studentId),
+        subjectId: String(g.subjectId)
+      })) : [];
+    } catch (e) { return []; }
   },
 
   async saveGrade(grade: Grade): Promise<void> {
     await fetch(`${API_URL}?action=save_grade`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(grade)
     });
   },
 
-  // AI Analysis (Keep Local for now or add table for it)
+  // AI Analysis (Keep LocalStorage for simplicity as it's temporary data)
   async saveAnalysis(result: AnalysisResult): Promise<void> {
     const data = JSON.parse(localStorage.getItem('sms_analysis') || '[]');
     data.push(result);
@@ -315,7 +335,7 @@ export const storage = {
 
   getAnalysis(studentId: string): AnalysisResult | undefined {
     const data = JSON.parse(localStorage.getItem('sms_analysis') || '[]');
-    return data.filter((a: AnalysisResult) => a.studentId === studentId).pop();
+    return data.filter((a: AnalysisResult) => String(a.studentId) === String(studentId)).pop();
   }
 };
 ```
@@ -324,8 +344,8 @@ export const storage = {
 
 ## 🛠️ Phase 5: Build & Upload
 
-1.  In your code editor terminal, run: `npm run build`.
-2.  This generates a `dist` or `build` folder.
-3.  Upload the **files inside that folder** to your `htdocs` directory on Byet.host.
+1.  In your terminal, run: `npm run build`
+2.  Open the newly created **`dist`** folder.
+3.  Upload **all files** inside `dist` to your `htdocs` folder on Byet.host.
 4.  Ensure `api.php` is also in `htdocs`.
 5.  Your site is now live!

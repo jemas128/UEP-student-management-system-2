@@ -109,6 +109,7 @@ export const StudentDirectory: React.FC<StudentDirectoryProps> = ({
                       {isApprovalsMode ? (
                         <div className="flex justify-end space-x-2">
                            <button 
+                            type="button"
                             onClick={() => onUpdateStatus(student.id, AccountStatus.APPROVED)}
                             className="p-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
                             title="Approve"
@@ -116,6 +117,7 @@ export const StudentDirectory: React.FC<StudentDirectoryProps> = ({
                             <Check className="h-4 w-4" />
                           </button>
                           <button 
+                            type="button"
                             onClick={() => onUpdateStatus(student.id, AccountStatus.REJECTED)}
                             className="p-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
                             title="Reject"
@@ -126,6 +128,7 @@ export const StudentDirectory: React.FC<StudentDirectoryProps> = ({
                       ) : (
                         <div className="flex justify-end space-x-2">
                           <button 
+                            type="button"
                             onClick={() => setEditingStudent(student)}
                             className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors group relative"
                             title="Edit Student"
@@ -134,6 +137,7 @@ export const StudentDirectory: React.FC<StudentDirectoryProps> = ({
                             <span className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap left-1/2 transform -translate-x-1/2">Edit</span>
                           </button>
                           <button 
+                            type="button"
                             onClick={() => onDelete(student.id)}
                             className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors group relative"
                             title="Delete Student"

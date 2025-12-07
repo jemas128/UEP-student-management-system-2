@@ -67,7 +67,7 @@ class StorageService {
   async saveUser(user: User): Promise<void> {
     await this.delay();
     const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
-    const idx = users.findIndex((u: User) => u.id === user.id);
+    const idx = users.findIndex((u: User) => String(u.id) === String(user.id));
     if (idx >= 0) {
       users[idx] = user;
     } else {
@@ -79,12 +79,13 @@ class StorageService {
   async deleteUser(userId: string): Promise<void> {
     await this.delay();
     const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
-    const filteredUsers = users.filter((u: User) => u.id !== userId);
+    // Fix: Ensure we compare strings to avoid string vs number issues
+    const filteredUsers = users.filter((u: User) => String(u.id) !== String(userId));
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(filteredUsers));
     
     // Cleanup grades
     const grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES) || '[]');
-    const filteredGrades = grades.filter((g: Grade) => g.studentId !== userId);
+    const filteredGrades = grades.filter((g: Grade) => String(g.studentId) !== String(userId));
     localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(filteredGrades));
   }
 
@@ -96,7 +97,7 @@ class StorageService {
   async saveSubject(subject: Subject): Promise<void> {
     await this.delay();
     const subjects = JSON.parse(localStorage.getItem(STORAGE_KEYS.SUBJECTS) || '[]');
-    const idx = subjects.findIndex((s: Subject) => s.id === subject.id);
+    const idx = subjects.findIndex((s: Subject) => String(s.id) === String(subject.id));
     if (idx >= 0) subjects[idx] = subject;
     else subjects.push(subject);
     localStorage.setItem(STORAGE_KEYS.SUBJECTS, JSON.stringify(subjects));
@@ -105,11 +106,12 @@ class StorageService {
   async deleteSubject(subjectId: string): Promise<void> {
     await this.delay();
     const subjects = JSON.parse(localStorage.getItem(STORAGE_KEYS.SUBJECTS) || '[]');
-    const filteredSubjects = subjects.filter((s: Subject) => s.id !== subjectId);
+    // Fix: Ensure we compare strings
+    const filteredSubjects = subjects.filter((s: Subject) => String(s.id) !== String(subjectId));
     localStorage.setItem(STORAGE_KEYS.SUBJECTS, JSON.stringify(filteredSubjects));
 
     const grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES) || '[]');
-    const filteredGrades = grades.filter((g: Grade) => g.subjectId !== subjectId);
+    const filteredGrades = grades.filter((g: Grade) => String(g.subjectId) !== String(subjectId));
     localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(filteredGrades));
   }
 
@@ -123,8 +125,8 @@ class StorageService {
     const grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES) || '[]');
     
     const idx = grades.findIndex((g: Grade) => 
-      g.id === grade.id || 
-      (g.studentId === grade.studentId && g.subjectId === grade.subjectId)
+      String(g.id) === String(grade.id) || 
+      (String(g.studentId) === String(grade.studentId) && String(g.subjectId) === String(grade.subjectId))
     );
 
     if (idx >= 0) {
@@ -147,7 +149,7 @@ class StorageService {
   getAnalysis(studentId: string): AnalysisResult | undefined {
     // Keep this sync for simple UI reads
     const data = JSON.parse(localStorage.getItem(STORAGE_KEYS.ANALYSIS) || '[]');
-    return data.filter((a: AnalysisResult) => a.studentId === studentId).pop();
+    return data.filter((a: AnalysisResult) => String(a.studentId) === String(studentId)).pop();
   }
 }
 
